@@ -1,0 +1,6 @@
+scpclip
+scpclip.exe
+*.test
+dist/
+.DS_Store
+Thumbs.db
