@@ -59,54 +59,20 @@ jobs:
           echo "Testing SSH..."
           ssh localhost "echo SSH OK"
 
-      - name: Setup clipboard and SSH (macOS)
+      - name: Setup clipboard (macOS)
         if: runner.os == 'macOS'
-        run: |
-          echo "Installing pngpaste..."
-          brew install pngpaste
-          echo "Enabling Remote Login..."
-          sudo systemsetup -setremotelogin on
-          echo "Configuring SSH keys..."
-          mkdir -p "$HOME/.ssh"
-          chmod 700 "$HOME/.ssh"
-          ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519" -N ""
-          cat "$HOME/.ssh/id_ed25519.pub" >> "$HOME/.ssh/authorized_keys"
-          chmod 600 "$HOME/.ssh/authorized_keys"
-          echo "NoHostAuthenticationForLocalhost yes" >> "$HOME/.ssh/config"
-          echo "Testing SSH..."
-          ssh localhost "echo SSH OK"
-
-      - name: Setup SSH (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "Checking sshd service..."
-          $svc = Get-Service sshd -ErrorAction SilentlyContinue
-          if (-not $svc) {
-            Write-Host "sshd not found, installing via MSI..."
-            $url = 'https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.8.2.0p2-Preview/OpenSSH-Win64-v9.8.2.0.msi'
-            $msi = "$env:TEMP\OpenSSH-Win64.msi"
-            Invoke-WebRequest -Uri $url -OutFile $msi -UseBasicParsing
-            Start-Process msiexec -ArgumentList "/i `"$msi`" /quiet ADDLOCAL=Server" -Wait
-            Write-Host "MSI install complete"
-          }
-          Write-Host "Starting sshd..."
-          Start-Service sshd
-          Write-Host "Configuring SSH keys..."
-          New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force | Out-Null
-          ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\id_ed25519" -N '""'
-          $pubkey = Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub"
-          $pubkey | Set-Content "C:\ProgramData\ssh\administrators_authorized_keys"
-          icacls.exe "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
-          Write-Host "Testing SSH..."
-          ssh -o StrictHostKeyChecking=no localhost "echo SSH OK"
+        run: brew install pngpaste
 
       - name: Integration tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum go test -tags integration -v -count=1 ./...
 
-      - name: Integration tests (macOS/Windows)
-        if: runner.os != 'Linux'
+      - name: Integration tests (macOS)
+        if: runner.os == 'macOS'
+        run: go test -tags integration -v -count=1 ./...
+
+      - name: Integration tests (Windows)
+        if: runner.os == 'Windows'
         run: go test -tags integration -v -count=1 ./...
 
       - name: Coverage report
