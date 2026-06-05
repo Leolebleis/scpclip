@@ -306,7 +306,7 @@ func TestIntegration_SuccessUpload(t *testing.T) {
 		t.Fatalf("file not found on remote: %s", remotePath)
 	}
 
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS == "linux" {
 		out, err := exec.Command("ssh", "localhost", "stat", "-c", "%a", remotePath).Output()
 		if err == nil {
 			perms := strings.TrimSpace(string(out))

@@ -77,14 +77,14 @@ jobs:
           Set-Service -Name sshd -StartupType Automatic
           New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force | Out-Null
           ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\id_ed25519" -N '""'
-          Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub" | Add-Content "$env:USERPROFILE\.ssh\authorized_keys"
+          $pubkey = Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub"
+          $pubkey | Set-Content "C:\ProgramData\ssh\administrators_authorized_keys"
+          icacls.exe "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
           ssh -o StrictHostKeyChecking=no localhost "echo SSH OK"
 
       - name: Integration tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum go test -tags integration -v -count=1 ./...
-        env:
-          DISPLAY: ":99.0"
 
       - name: Integration tests (macOS/Windows)
         if: runner.os != 'Linux'

@@ -44,14 +44,14 @@ func (c *OSClipboard) readDarwin() ([]byte, error) {
 func (c *OSClipboard) readLinux() ([]byte, error) {
 	if path, err := exec.LookPath("xclip"); err == nil {
 		out, err := exec.Command(path, "-selection", "clipboard", "-target", "image/png", "-o").Output()
-		if err != nil {
+		if err != nil || len(out) == 0 {
 			return nil, errors.New("no image in clipboard")
 		}
 		return out, nil
 	}
 	if path, err := exec.LookPath("wl-paste"); err == nil {
 		out, err := exec.Command(path, "--type", "image/png").Output()
-		if err != nil {
+		if err != nil || len(out) == 0 {
 			return nil, errors.New("no image in clipboard")
 		}
 		return out, nil
