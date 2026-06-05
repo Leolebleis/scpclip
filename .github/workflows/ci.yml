@@ -29,7 +29,74 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - run: go test -v ./...
+
+      - name: Unit tests with coverage
+        shell: bash
+        run: |
+          mkdir -p coverage/unit
+          go test -v -cover ./... -args -test.gocoverdir="$PWD/coverage/unit"
+
+      - name: Setup clipboard and SSH (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xclip openssh-server
+          sudo systemctl enable ssh
+          sudo systemctl start ssh
+          chmod g-w "$HOME"
+          chmod o-w "$HOME"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519" -N ""
+          cat "$HOME/.ssh/id_ed25519.pub" >> "$HOME/.ssh/authorized_keys"
+          chmod 600 "$HOME/.ssh/authorized_keys"
+          echo "NoHostAuthenticationForLocalhost yes" >> "$HOME/.ssh/config"
+          sudo systemctl restart ssh
+          ssh localhost "echo SSH OK"
+
+      - name: Setup clipboard and SSH (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install pngpaste
+          sudo systemsetup -setremotelogin on
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519" -N ""
+          cat "$HOME/.ssh/id_ed25519.pub" >> "$HOME/.ssh/authorized_keys"
+          chmod 600 "$HOME/.ssh/authorized_keys"
+          echo "NoHostAuthenticationForLocalhost yes" >> "$HOME/.ssh/config"
+          ssh localhost "echo SSH OK"
+
+      - name: Setup SSH (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $cap = Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH.Server*'
+          if ($cap.State -ne 'Installed') { Add-WindowsCapability -Online -Name $cap.Name }
+          Start-Service sshd
+          Set-Service -Name sshd -StartupType Automatic
+          ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\id_ed25519" -N '""'
+          Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub" | Add-Content "$env:USERPROFILE\.ssh\authorized_keys"
+          ssh -o StrictHostKeyChecking=no localhost "echo SSH OK"
+
+      - name: Integration tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum go test -tags integration -v -count=1 ./...
+        env:
+          DISPLAY: ":99.0"
+
+      - name: Integration tests (macOS/Windows)
+        if: runner.os != 'Linux'
+        run: go test -tags integration -v -count=1 ./...
+
+      - name: Coverage report
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          if [ -d coverage/unit ]; then
+            echo "## Coverage"
+            go tool covdata percent -i=./coverage/unit
+          fi
 
   build:
     runs-on: ubuntu-latest
