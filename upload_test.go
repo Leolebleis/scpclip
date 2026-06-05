@@ -9,16 +9,19 @@ import (
 	"testing"
 )
 
-func fakeExecCommand(t *testing.T, exitCode int) func(string, ...string) *exec.Cmd {
+
+
+func fakeExecCommand(t *testing.T, shouldFail bool) func(string, ...string) *exec.Cmd {
 	t.Helper()
 	return func(name string, args ...string) *exec.Cmd {
 		cs := []string{"-test.run=TestHelperProcess", "--", name}
 		cs = append(cs, args...)
 		cmd := exec.Command(os.Args[0], cs...)
-		cmd.Env = []string{
-			"GO_WANT_HELPER_PROCESS=1",
-			"GO_HELPER_EXIT_CODE=" + strings.Repeat("1", exitCode),
+		env := []string{"GO_WANT_HELPER_PROCESS=1"}
+		if shouldFail {
+			env = append(env, "GO_HELPER_FAIL=1")
 		}
+		cmd.Env = env
 		return cmd
 	}
 }
@@ -28,7 +31,7 @@ func TestHelperProcess(t *testing.T) {
 		return
 	}
 	_, _ = io.Copy(io.Discard, os.Stdin)
-	if os.Getenv("GO_HELPER_EXIT_CODE") != "" {
+	if os.Getenv("GO_HELPER_FAIL") == "1" {
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -41,7 +44,7 @@ func TestUpload_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	u := &SSHUploader{command: fakeExecCommand(t, 0)}
+	u := &SSHUploader{command: fakeExecCommand(t, false)}
 	err := u.Upload(tmpFile, "user@host", "/tmp/test.png")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -55,7 +58,7 @@ func TestUpload_SSHFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	u := &SSHUploader{command: fakeExecCommand(t, 1)}
+	u := &SSHUploader{command: fakeExecCommand(t, true)}
 	err := u.Upload(tmpFile, "user@host", "/tmp/test.png")
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -63,7 +66,7 @@ func TestUpload_SSHFails(t *testing.T) {
 }
 
 func TestUpload_BadLocalPath(t *testing.T) {
-	u := &SSHUploader{command: fakeExecCommand(t, 0)}
+	u := &SSHUploader{command: fakeExecCommand(t, false)}
 	err := u.Upload("/nonexistent/file.png", "user@host", "/tmp/test.png")
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -83,7 +86,7 @@ func TestUpload_CommandArgs(t *testing.T) {
 		command: func(name string, args ...string) *exec.Cmd {
 			capturedName = name
 			capturedArgs = args
-			return fakeExecCommand(t, 0)(name, args...)
+			return fakeExecCommand(t, false)(name, args...)
 		},
 	}
 

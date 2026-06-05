@@ -29,54 +29,46 @@ type githubAsset struct {
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-func checkLatestVersion() (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func fetchLatestRelease(timeout time.Duration) (githubRelease, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET",
 		fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repoSlug), nil)
 	if err != nil {
-		return "", err
+		return githubRelease{}, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return githubRelease{}, err
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GitHub API returned %d", resp.StatusCode)
+		return githubRelease{}, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
 	}
 
 	var release githubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return githubRelease{}, err
+	}
+	return release, nil
+}
+
+func checkLatestVersion() (string, error) {
+	release, err := fetchLatestRelease(5 * time.Second)
+	if err != nil {
 		return "", err
 	}
 	return strings.TrimPrefix(release.TagName, "v"), nil
 }
 
 func doUpdate() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "GET",
-		fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repoSlug), nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-
-	resp, err := http.DefaultClient.Do(req)
+	release, err := fetchLatestRelease(30 * time.Second)
 	if err != nil {
 		return fmt.Errorf("checking for updates: %w", err)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	var release githubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return err
 	}
 
 	latest := strings.TrimPrefix(release.TagName, "v")
@@ -92,7 +84,10 @@ func doUpdate() error {
 
 	fmt.Printf("updating %s -> %s...\n", version, latest)
 
-	dlReq, err := http.NewRequestWithContext(ctx, "GET", asset.BrowserDownloadURL, nil)
+	dlCtx, dlCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer dlCancel()
+
+	dlReq, err := http.NewRequestWithContext(dlCtx, "GET", asset.BrowserDownloadURL, nil)
 	if err != nil {
 		return err
 	}

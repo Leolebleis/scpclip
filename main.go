@@ -85,7 +85,10 @@ Set a default host to skip --host every time:
 		return
 	}
 
-	cfg, _ := loadConfig()
+	cfg, cfgErr := loadConfig()
+	if cfgErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not read config: %v\n", cfgErr)
+	}
 
 	if *host == "" {
 		*host = os.Getenv("SCPCLIP_HOST")
@@ -123,12 +126,13 @@ Set a default host to skip --host every time:
 }
 
 func handleDefault(args []string) {
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
+
 	if len(args) == 0 {
-		cfg, err := loadConfig()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "error:", err)
-			os.Exit(1)
-		}
 		if cfg.Host == "" {
 			fmt.Println("no default host set")
 		} else {
@@ -137,11 +141,6 @@ func handleDefault(args []string) {
 		return
 	}
 
-	cfg, err := loadConfig()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		os.Exit(1)
-	}
 	cfg.Host = args[0]
 	if err := saveConfig(cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)

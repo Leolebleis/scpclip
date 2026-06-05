@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -124,7 +125,7 @@ func TestFindAsset(t *testing.T) {
 	}
 
 	expectedSuffix := "_" + goos + "_" + goarch + ext
-	if !bytes.HasSuffix([]byte(asset.Name), []byte(expectedSuffix)) {
+	if !strings.HasSuffix(asset.Name, expectedSuffix) {
 		t.Fatalf("expected asset ending with %q, got %q", expectedSuffix, asset.Name)
 	}
 }
