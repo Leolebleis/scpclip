@@ -29,7 +29,60 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - run: go test -v ./...
+
+      - name: Unit tests with coverage
+        shell: bash
+        run: |
+          mkdir -p coverage/unit
+          go test -v -cover ./... -args -test.gocoverdir="$PWD/coverage/unit"
+
+      - name: Setup clipboard and SSH (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "::group::Install packages"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb xclip openssh-server
+          echo "::endgroup::"
+          echo "::group::Configure SSH"
+          sudo systemctl enable ssh
+          sudo systemctl start ssh
+          chmod g-w "$HOME"
+          chmod o-w "$HOME"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519" -N ""
+          cat "$HOME/.ssh/id_ed25519.pub" >> "$HOME/.ssh/authorized_keys"
+          chmod 600 "$HOME/.ssh/authorized_keys"
+          echo "NoHostAuthenticationForLocalhost yes" >> "$HOME/.ssh/config"
+          sudo systemctl restart ssh
+          echo "::endgroup::"
+          echo "Testing SSH..."
+          ssh localhost "echo SSH OK"
+
+      - name: Setup clipboard (macOS)
+        if: runner.os == 'macOS'
+        run: brew install pngpaste
+
+      - name: Integration tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum go test -tags integration -v -count=1 ./...
+
+      - name: Integration tests (macOS)
+        if: runner.os == 'macOS'
+        run: go test -tags integration -v -count=1 ./...
+
+      - name: Integration tests (Windows)
+        if: runner.os == 'Windows'
+        run: go test -tags integration -v -count=1 ./...
+
+      - name: Coverage report
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          if [ -d coverage/unit ]; then
+            echo "## Coverage"
+            go tool covdata percent -i=./coverage/unit
+          fi
 
   build:
     runs-on: ubuntu-latest

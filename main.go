@@ -34,6 +34,8 @@ func run(host, dir string, cb Clipboard, up Uploader) error {
 		return fmt.Errorf("clipboard write failed: %w", err)
 	}
 
+	success("Uploaded to %s:%s", host, remotePath)
+	success("Path copied to clipboard")
 	fmt.Println(remotePath)
 	return nil
 }
@@ -64,7 +66,7 @@ Set a default host to skip --host every time:
 
 	if len(os.Args) >= 2 && os.Args[1] == "update" {
 		if err := doUpdate(); err != nil {
-			fmt.Fprintln(os.Stderr, "error:", err)
+			fail("%s", err)
 			os.Exit(1)
 		}
 		return
@@ -79,7 +81,9 @@ Set a default host to skip --host every time:
 		fmt.Println("scpclip", version)
 		if version != "dev" {
 			if latest, err := checkLatestVersion(); err == nil && latest != version {
-				fmt.Fprintf(os.Stderr, "\nUpdate available: %s -> %s\nRun 'scpclip update' to update\n", version, latest)
+				fmt.Fprintln(os.Stderr)
+				success("Update available: %s → %s", version, latest)
+				hint("Run 'scpclip update' to update")
 			}
 		}
 		return
@@ -87,7 +91,7 @@ Set a default host to skip --host every time:
 
 	cfg, cfgErr := loadConfig()
 	if cfgErr != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not read config: %v\n", cfgErr)
+		fail("Could not read config: %v", cfgErr)
 	}
 
 	if *host == "" {
@@ -97,7 +101,8 @@ Set a default host to skip --host every time:
 		*host = cfg.Host
 	}
 	if *host == "" {
-		fmt.Fprintln(os.Stderr, "error: no host specified (use --host, set SCPCLIP_HOST, or run: scpclip default <host>)")
+		fail("No host specified")
+		hint("Run 'scpclip default <host>' to set a default, or use --host")
 		os.Exit(1)
 	}
 
@@ -112,7 +117,7 @@ Set a default host to skip --host every time:
 	}
 
 	if _, err := exec.LookPath("ssh"); err != nil {
-		fmt.Fprintln(os.Stderr, "error: ssh not found on PATH")
+		fail("ssh not found on PATH")
 		os.Exit(1)
 	}
 
@@ -120,7 +125,10 @@ Set a default host to skip --host every time:
 	up := NewSSHUploader()
 
 	if err := run(*host, *dir, cb, up); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+		fail("%s", err)
+		if err.Error() == "no image in clipboard" {
+			hint("Take a screenshot first (Win+Shift+S, Cmd+Shift+4, etc.)")
+		}
 		os.Exit(1)
 	}
 }
@@ -128,13 +136,14 @@ Set a default host to skip --host every time:
 func handleDefault(args []string) {
 	cfg, err := loadConfig()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+		fail("%s", err)
 		os.Exit(1)
 	}
 
 	if len(args) == 0 {
 		if cfg.Host == "" {
 			fmt.Println("no default host set")
+			hint("Run 'scpclip default <host>' to set one")
 		} else {
 			fmt.Println(cfg.Host)
 		}
@@ -143,8 +152,8 @@ func handleDefault(args []string) {
 
 	cfg.Host = args[0]
 	if err := saveConfig(cfg); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+		fail("%s", err)
 		os.Exit(1)
 	}
-	fmt.Printf("default host set to %s\n", args[0])
+	success("Default host set to %s", bold(args[0]))
 }

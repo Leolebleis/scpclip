@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -73,7 +74,7 @@ func doUpdate() error {
 
 	latest := strings.TrimPrefix(release.TagName, "v")
 	if latest == version {
-		fmt.Printf("already up to date (%s)\n", version)
+		success("Already up to date (%s)", version)
 		return nil
 	}
 
@@ -82,7 +83,7 @@ func doUpdate() error {
 		return fmt.Errorf("no release asset for %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
-	fmt.Printf("updating %s -> %s...\n", version, latest)
+	fmt.Fprintf(os.Stderr, "  Updating %s → %s...\n", version, latest)
 
 	dlCtx, dlCancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer dlCancel()
@@ -116,7 +117,7 @@ func doUpdate() error {
 		return fmt.Errorf("applying update: %w", err)
 	}
 
-	fmt.Printf("updated to %s\n", latest)
+	success("Updated %s → %s", version, latest)
 	return nil
 }
 

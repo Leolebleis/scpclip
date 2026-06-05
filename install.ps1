@@ -35,7 +35,12 @@ try {
     New-Item -ItemType Directory -Path $installDir -Force | Out-Null
     Move-Item (Join-Path $tmpDir "scpclip.exe") (Join-Path $installDir "scpclip.exe") -Force
 
-    Write-Host "Installed scpclip $version to $installDir\scpclip.exe"
+    Write-Host ""
+    Write-Host "✓ Installed scpclip $version to $installDir\scpclip.exe"
+    Write-Host ""
+    Write-Host "  Get started:"
+    Write-Host "    scpclip default <host>   set your default SSH host"
+    Write-Host "    scpclip --help           see all options"
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     if ($userPath -notlike "*$installDir*") {
