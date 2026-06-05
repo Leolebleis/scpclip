@@ -15,6 +15,11 @@ import (
 var testBinary string
 
 func TestMain(m *testing.M) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") == "1" {
+		os.Exit(0)
+		return
+	}
+
 	name := "scpclip"
 	if runtime.GOOS == "windows" {
 		name += ".exe"
