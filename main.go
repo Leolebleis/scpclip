@@ -45,6 +45,7 @@ func main() {
 Usage:
   scpclip [--host user@host] [--dir /remote/dir]
   scpclip default [host]    set or show default host
+  scpclip update            update to latest version
   scpclip --version
 
 Options:
@@ -61,6 +62,14 @@ Set a default host to skip --host every time:
 		return
 	}
 
+	if len(os.Args) >= 2 && os.Args[1] == "update" {
+		if err := doUpdate(); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	host := flag.String("host", "", "SSH host (overrides SCPCLIP_HOST env var)")
 	dir := flag.String("dir", "", "Remote directory (overrides SCPCLIP_DIR env var, default /tmp)")
 	showVersion := flag.Bool("version", false, "Print version and exit")
@@ -68,6 +77,11 @@ Set a default host to skip --host every time:
 
 	if *showVersion {
 		fmt.Println("scpclip", version)
+		if version != "dev" {
+			if latest, err := checkLatestVersion(); err == nil && latest != version {
+				fmt.Fprintf(os.Stderr, "\nUpdate available: %s -> %s\nRun 'scpclip update' to update\n", version, latest)
+			}
+		}
 		return
 	}
 

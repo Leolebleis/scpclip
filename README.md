@@ -71,6 +71,13 @@ Priority: `--host` flag > `SCPCLIP_HOST` env var > saved default.
 | Linux (Wayland) | `wl-clipboard` | `apt install wl-clipboard` |
 | Windows | PowerShell | Built-in |
 
+## Update
+
+```sh
+scpclip update            # update to latest version
+scpclip --version         # shows version + checks for updates
+```
+
 ## How it works
 
 1. Reads PNG image from clipboard via native OS tools
