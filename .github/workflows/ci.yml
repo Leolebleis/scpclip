@@ -75,6 +75,7 @@ jobs:
           if ($cap.State -ne 'Installed') { Add-WindowsCapability -Online -Name $cap.Name }
           Start-Service sshd
           Set-Service -Name sshd -StartupType Automatic
+          New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force | Out-Null
           ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\id_ed25519" -N '""'
           Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub" | Add-Content "$env:USERPROFILE\.ssh\authorized_keys"
           ssh -o StrictHostKeyChecking=no localhost "echo SSH OK"

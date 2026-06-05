@@ -100,13 +100,19 @@ func clearClipboard(t *testing.T) {
 	t.Helper()
 	switch runtime.GOOS {
 	case "linux":
-		cmd := exec.Command("xclip", "-selection", "clipboard")
-		cmd.Stdin = strings.NewReader("")
+		cmd := exec.Command("xclip", "-selection", "clipboard", "-target", "image/png", "-i", "/dev/null")
 		if err := cmd.Run(); err != nil {
-			t.Logf("warning: clearing clipboard: %v", err)
+			t.Logf("warning: clearing image clipboard: %v", err)
+		}
+		cmd2 := exec.Command("xclip", "-selection", "clipboard")
+		cmd2.Stdin = strings.NewReader("cleared")
+		if err := cmd2.Run(); err != nil {
+			t.Logf("warning: clearing text clipboard: %v", err)
 		}
 	case "darwin":
-		if err := exec.Command("pbcopy").Run(); err != nil {
+		cmd := exec.Command("pbcopy")
+		cmd.Stdin = strings.NewReader("cleared")
+		if err := cmd.Run(); err != nil {
 			t.Logf("warning: clearing clipboard: %v", err)
 		}
 	case "windows":
