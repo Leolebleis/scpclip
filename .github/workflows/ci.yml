@@ -80,16 +80,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Write-Host "Checking OpenSSH Server capability..."
-          $cap = Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH.Server*'
-          Write-Host "State: $($cap.State)"
-          if ($cap.State -ne 'Installed') {
-            Write-Host "Installing OpenSSH Server..."
-            Add-WindowsCapability -Online -Name $cap.Name
-          }
-          Write-Host "Starting sshd..."
+          Write-Host "Starting sshd (pre-installed on Server 2025)..."
           Start-Service sshd
-          Set-Service -Name sshd -StartupType Automatic
           Write-Host "Configuring SSH keys..."
           New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force | Out-Null
           ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\id_ed25519" -N '""'
