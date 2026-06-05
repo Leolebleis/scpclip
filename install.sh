@@ -50,7 +50,12 @@ mkdir -p "$INSTALL_DIR"
 mv scpclip "$INSTALL_DIR/scpclip"
 chmod +x "$INSTALL_DIR/scpclip"
 
-echo "Installed scpclip $VERSION to $INSTALL_DIR/scpclip"
+echo ""
+echo "✓ Installed scpclip $VERSION to $INSTALL_DIR/scpclip"
+echo ""
+echo "  Get started:"
+echo "    scpclip default <host>   set your default SSH host"
+echo "    scpclip --help           see all options"
 
 case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
