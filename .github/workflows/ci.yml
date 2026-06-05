@@ -80,7 +80,17 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Write-Host "Starting sshd (pre-installed on Server 2025)..."
+          Write-Host "Checking sshd service..."
+          $svc = Get-Service sshd -ErrorAction SilentlyContinue
+          if (-not $svc) {
+            Write-Host "sshd not found, installing via MSI..."
+            $url = 'https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.8.2.0p2-Preview/OpenSSH-Win64-v9.8.2.0.msi'
+            $msi = "$env:TEMP\OpenSSH-Win64.msi"
+            Invoke-WebRequest -Uri $url -OutFile $msi -UseBasicParsing
+            Start-Process msiexec -ArgumentList "/i `"$msi`" /quiet ADDLOCAL=Server" -Wait
+            Write-Host "MSI install complete"
+          }
+          Write-Host "Starting sshd..."
           Start-Service sshd
           Write-Host "Configuring SSH keys..."
           New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force | Out-Null
