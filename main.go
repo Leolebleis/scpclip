@@ -39,6 +39,28 @@ func run(host, dir string, cb Clipboard, up Uploader) error {
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `scpclip - clipboard image to SSH host in one command
+
+Usage:
+  scpclip [--host user@host] [--dir /remote/dir]
+  scpclip default [host]    set or show default host
+  scpclip --version
+
+Options:
+`)
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, `
+Set a default host to skip --host every time:
+  scpclip default pi
+`)
+	}
+
+	if len(os.Args) >= 2 && os.Args[1] == "default" {
+		handleDefault(os.Args[2:])
+		return
+	}
+
 	host := flag.String("host", "", "SSH host (overrides SCPCLIP_HOST env var)")
 	dir := flag.String("dir", "", "Remote directory (overrides SCPCLIP_DIR env var, default /tmp)")
 	showVersion := flag.Bool("version", false, "Print version and exit")
@@ -49,16 +71,24 @@ func main() {
 		return
 	}
 
+	cfg, _ := loadConfig()
+
 	if *host == "" {
 		*host = os.Getenv("SCPCLIP_HOST")
 	}
 	if *host == "" {
-		fmt.Fprintln(os.Stderr, "error: no host specified (use --host or set SCPCLIP_HOST)")
+		*host = cfg.Host
+	}
+	if *host == "" {
+		fmt.Fprintln(os.Stderr, "error: no host specified (use --host, set SCPCLIP_HOST, or run: scpclip default <host>)")
 		os.Exit(1)
 	}
 
 	if *dir == "" {
 		*dir = os.Getenv("SCPCLIP_DIR")
+	}
+	if *dir == "" {
+		*dir = cfg.Dir
 	}
 	if *dir == "" {
 		*dir = "/tmp"
@@ -76,4 +106,32 @@ func main() {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
+}
+
+func handleDefault(args []string) {
+	if len(args) == 0 {
+		cfg, err := loadConfig()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			os.Exit(1)
+		}
+		if cfg.Host == "" {
+			fmt.Println("no default host set")
+		} else {
+			fmt.Println(cfg.Host)
+		}
+		return
+	}
+
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
+	cfg.Host = args[0]
+	if err := saveConfig(cfg); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
+	fmt.Printf("default host set to %s\n", args[0])
 }

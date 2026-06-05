@@ -50,6 +50,16 @@ export SCPCLIP_HOST=user@myserver    # add to your shell profile
 
 Flags override env vars. The tool uses your system `ssh`, so all `~/.ssh/config` settings (ProxyJump, keys, aliases) work automatically.
 
+Or save a default host so you never need `--host`:
+
+```sh
+scpclip default pi           # save default (uses ~/.ssh/config aliases)
+scpclip default              # show current default
+scpclip                      # just works
+```
+
+Priority: `--host` flag > `SCPCLIP_HOST` env var > saved default.
+
 ## Requirements
 
 `ssh` must be on your PATH (ships with all modern OSes). For clipboard access:
