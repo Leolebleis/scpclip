@@ -61,7 +61,7 @@ func (c *OSClipboard) readLinux() ([]byte, error) {
 
 func (c *OSClipboard) readWindows() ([]byte, error) {
 	tmpFile := filepath.Join(os.TempDir(), "scpclip_read.png")
-	defer os.Remove(tmpFile)
+	defer os.Remove(tmpFile) //nolint:errcheck // best-effort cleanup of temp file
 
 	script := fmt.Sprintf(`Add-Type -AssemblyName System.Windows.Forms
 $img = [System.Windows.Forms.Clipboard]::GetImage()

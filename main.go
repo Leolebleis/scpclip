@@ -19,7 +19,7 @@ func run(host, dir string, cb Clipboard, up Uploader) error {
 
 	filename := fmt.Sprintf("scpclip_%d.png", time.Now().Unix())
 	tmpPath := filepath.Join(os.TempDir(), filename)
-	defer os.Remove(tmpPath)
+	defer os.Remove(tmpPath) //nolint:errcheck // best-effort cleanup of temp file
 
 	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
 		return fmt.Errorf("writing temp file: %w", err)

@@ -23,7 +23,7 @@ func (u *SSHUploader) Upload(localPath, host, remotePath string) error {
 	if err != nil {
 		return fmt.Errorf("opening file: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only file, close error is not actionable
 
 	cmd := u.command("ssh", host, fmt.Sprintf("umask 077 && cat > %s", remotePath))
 	cmd.Stdin = f

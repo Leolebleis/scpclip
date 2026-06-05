@@ -27,7 +27,7 @@ func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
-	io.Copy(io.Discard, os.Stdin)
+	_, _ = io.Copy(io.Discard, os.Stdin)
 	if os.Getenv("GO_HELPER_EXIT_CODE") != "" {
 		os.Exit(1)
 	}
