@@ -12,19 +12,37 @@ import (
 	"testing"
 )
 
-func buildBinary(t *testing.T) string {
-	t.Helper()
+var testBinary string
+
+func TestMain(m *testing.M) {
 	name := "scpclip"
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
-	bin := filepath.Join(t.TempDir(), name)
-	cmd := exec.Command("go", "build", "-o", bin, ".")
+	dir, err := os.MkdirTemp("", "scpclip-test-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "creating temp dir: %v\n", err)
+		os.Exit(1)
+	}
+	defer os.RemoveAll(dir) //nolint:errcheck
+
+	testBinary = filepath.Join(dir, name)
+	cmd := exec.Command("go", "build", "-o", testBinary, ".")
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("building binary: %v", err)
+		fmt.Fprintf(os.Stderr, "building binary: %v\n", err)
+		os.Exit(1)
 	}
-	return bin
+
+	os.Exit(m.Run())
+}
+
+func buildBinary(t *testing.T) string {
+	t.Helper()
+	if testBinary == "" {
+		t.Fatal("testBinary not set — TestMain didn't run")
+	}
+	return testBinary
 }
 
 type result struct {
