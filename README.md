@@ -22,12 +22,15 @@ irm https://raw.githubusercontent.com/leolebleis/scpclip/main/install.ps1 | iex
 go install github.com/leolebleis/scpclip@latest
 ```
 
-Re-run the install command to update to the latest version.
+After installing, update anytime with `scpclip update`.
 
 ## Usage
 
 ```
-scpclip [--host user@host] [--dir /remote/dir] [--version]
+scpclip [--host user@host] [--dir /remote/dir]
+scpclip default [host]       set or show default host
+scpclip update               update to latest version
+scpclip --version            print version (+ check for updates)
 ```
 
 1. Copy an image to your clipboard (screenshot, snip, etc.)
@@ -37,28 +40,22 @@ scpclip [--host user@host] [--dir /remote/dir] [--version]
 
 ## Configuration
 
-Set a default host so you don't need `--host` every time:
+Set a default host once — uses your `~/.ssh/config` aliases:
 
 ```sh
-export SCPCLIP_HOST=user@myserver    # add to your shell profile
+scpclip default pi           # save default host
+scpclip default              # show current default
+scpclip                      # just works
 ```
+
+You can also use flags or env vars:
 
 | Flag / Env Var | Description | Default |
 |----------------|-------------|---------|
 | `--host` / `SCPCLIP_HOST` | SSH host (required) | — |
 | `--dir` / `SCPCLIP_DIR` | Remote directory | `/tmp` |
 
-Flags override env vars. The tool uses your system `ssh`, so all `~/.ssh/config` settings (ProxyJump, keys, aliases) work automatically.
-
-Or save a default host so you never need `--host`:
-
-```sh
-scpclip default pi           # save default (uses ~/.ssh/config aliases)
-scpclip default              # show current default
-scpclip                      # just works
-```
-
-Priority: `--host` flag > `SCPCLIP_HOST` env var > saved default.
+Priority: `--host` flag > `SCPCLIP_HOST` env var > saved default. The tool uses your system `ssh`, so all `~/.ssh/config` settings (ProxyJump, keys, aliases) work automatically.
 
 ## Requirements
 
