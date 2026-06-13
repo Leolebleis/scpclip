@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 )
 
@@ -18,7 +17,17 @@ func run(host, dir string, cb Clipboard, up Uploader) error {
 	}
 
 	filename := fmt.Sprintf("scpclip_%d.png", time.Now().Unix())
-	tmpPath := filepath.Join(os.TempDir(), filename)
+
+	// Stage the image in a uniquely-named local temp file. It must NOT reuse
+	// the remote filename: when the host is local and --dir is the temp dir,
+	// tmpPath would equal remotePath and the deferred cleanup below would
+	// delete the file we just uploaded.
+	tmpFile, err := os.CreateTemp("", "scpclip-*.png")
+	if err != nil {
+		return fmt.Errorf("creating temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	tmpFile.Close()          //nolint:errcheck // reopened via os.WriteFile below
 	defer os.Remove(tmpPath) //nolint:errcheck // best-effort cleanup of temp file
 
 	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
