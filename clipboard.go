@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -43,6 +44,15 @@ func (c *OSClipboard) readDarwin() ([]byte, error) {
 
 func (c *OSClipboard) readLinux() ([]byte, error) {
 	if path, err := exec.LookPath("xclip"); err == nil {
+		// xclip -o returns the selection's raw bytes even for a target the
+		// owner doesn't actually provide (e.g. plain text is handed back for
+		// an image/png request). Query TARGETS first and only treat the
+		// clipboard as an image when image/png is genuinely offered. See
+		// xclip(1): with -o, the TARGETS atom lists the valid target atoms.
+		targets, err := exec.Command(path, "-selection", "clipboard", "-target", "TARGETS", "-o").Output()
+		if err != nil || !slices.Contains(strings.Fields(string(targets)), "image/png") {
+			return nil, errors.New("no image in clipboard")
+		}
 		out, err := exec.Command(path, "-selection", "clipboard", "-target", "image/png", "-o").Output()
 		if err != nil || len(out) == 0 {
 			return nil, errors.New("no image in clipboard")
