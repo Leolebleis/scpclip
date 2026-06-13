@@ -95,15 +95,31 @@ func putImageOnClipboard(t *testing.T, pngPath string) {
 	t.Helper()
 	switch runtime.GOOS {
 	case "linux":
-		cmd := exec.Command("xclip", "-selection", "clipboard", "-target", "image/png", "-i")
 		f, err := os.Open(pngPath)
 		if err != nil {
 			t.Fatalf("opening test png: %v", err)
 		}
 		defer f.Close()
+		// xclip -i forks a background process that owns the X selection and
+		// inherits stdout/stderr, holding them open until another client takes
+		// ownership. CombinedOutput() (or any pipe) therefore makes cmd.Run()
+		// block forever waiting for EOF on the inherited pipe — a 600s test
+		// hang. Direct the output to a real *os.File: os/exec hands the fd to
+		// the child as-is and starts no copy goroutine, so Run() returns when
+		// the foreground xclip exits. (clearClipboard runs the same `xclip -i`
+		// without hanging for exactly this reason — Run() with file-backed fds.)
+		out, err := os.CreateTemp(t.TempDir(), "xclip-out-*")
+		if err != nil {
+			t.Fatalf("creating temp file: %v", err)
+		}
+		defer out.Close()
+		cmd := exec.Command("xclip", "-selection", "clipboard", "-target", "image/png", "-i")
 		cmd.Stdin = f
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("xclip set image: %v: %s", err, out)
+		cmd.Stdout = out
+		cmd.Stderr = out
+		if err := cmd.Run(); err != nil {
+			logs, _ := os.ReadFile(out.Name())
+			t.Fatalf("xclip set image: %v: %s", err, logs)
 		}
 	case "darwin":
 		script := fmt.Sprintf(`set the clipboard to (read POSIX file "%s" as «class PNGf»)`, pngPath)
