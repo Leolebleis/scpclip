@@ -37,12 +37,23 @@ curl -sSfL "$URL" -o "$TMPDIR/$ARCHIVE"
 curl -sSfL "$CHECKSUMS_URL" -o "$TMPDIR/checksums.txt"
 
 cd "$TMPDIR"
+# Verify by computing the hash and comparing strings. Avoid `-c`/`--quiet`:
+# macOS now ships a BSD-flavored sha256sum that rejects those GNU long
+# options, which (under `set -e`) aborts the install before extraction.
+EXPECTED=$(grep "$ARCHIVE" checksums.txt | awk '{print $1}')
 if command -v sha256sum >/dev/null 2>&1; then
-    grep "$ARCHIVE" checksums.txt | sha256sum -c --quiet
+    ACTUAL=$(sha256sum "$ARCHIVE" | awk '{print $1}')
 elif command -v shasum >/dev/null 2>&1; then
-    grep "$ARCHIVE" checksums.txt | shasum -a 256 -c --quiet
+    ACTUAL=$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')
 else
+    ACTUAL=""
     echo "Warning: no checksum tool found, skipping verification" >&2
+fi
+if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+    echo "Checksum verification failed for $ARCHIVE" >&2
+    echo "  expected: $EXPECTED" >&2
+    echo "  actual:   $ACTUAL" >&2
+    exit 1
 fi
 
 tar xzf "$ARCHIVE" scpclip
